@@ -22,10 +22,7 @@ class NewsRepository {
   }
 
   Future<CategoreiesNewsModel> fetchCategoryNewsApi(String categoryname) async {
-    final respose = await get(Uri.parse('https://newsapi.org/v2/everything?q=${categoryname}&apiKey=436677f67002475aab94d709d225211c'));
-    if (kDebugMode) {
-      print(respose.body);
-    }
+    final respose = await get(Uri.parse('https://newsapi.org/v2/everything?q=$categoryname&apiKey=436677f67002475aab94d709d225211c'));
 
     if (respose.statusCode == 200) {
       final body = jsonDecode(respose.body);

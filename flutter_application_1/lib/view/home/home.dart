@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/Routes/routes_name.dart';
+import 'package:flutter_application_1/bloc/news_bloc.dart';
 import 'package:flutter_application_1/model/categories_news_model.dart';
 import 'package:flutter_application_1/utils/colors.dart';
 import 'package:flutter_application_1/view/news_detail.dart';
 import 'package:flutter_application_1/view_model/newsModel.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final format = DateFormat('MMMM dd, yyyy');
 
   String name = 'bbc-news';
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    context.read<NewsBloc>().add(FetchNewsChannelEvent(channelId: 'bbc-news'));
+    //context.read<NewsBloc>().add(FetchCategoryEvent(categoryId: 'general'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height * 1;
@@ -50,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 25,
                 )),
           ),
-          title: Center(
+          title: const Center(
               child: Text(
             'News',
             //style: GoogleFonts.salsa(fontSize: 24, fontWeight: FontWeight.bold),
@@ -60,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 elevation: 5,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 color: Colors.white,
-                icon: Icon(
+                icon: const Icon(
                   Icons.more_vert_outlined,
                   color: Colors.black,
                   size: 25,
@@ -85,34 +94,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (FilterList.reuters.name == item.name) {
                     name = 'reuters';
                   }
-                  setState(() {
-                    selectedMenu = item;
-                  });
+                  context.read<NewsBloc>().add(FetchNewsChannelEvent(channelId: name));
                 },
                 itemBuilder: (context) => <PopupMenuEntry<FilterList>>[
-                      PopupMenuItem<FilterList>(
-                        child: Text('BBC News'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.bbcNews,
+                        child: Text('BBC News'),
                       ),
-                      PopupMenuItem<FilterList>(
-                        child: Text('Ary News'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.aryNews,
+                        child: Text('Ary News'),
                       ),
-                      PopupMenuItem<FilterList>(
-                        child: Text('CNN'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.cnn,
+                        child: Text('CNN'),
                       ),
-                      PopupMenuItem<FilterList>(
-                        child: Text('Buzzfeed'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.buzzfeed,
+                        child: Text('Buzzfeed'),
                       ),
-                      PopupMenuItem<FilterList>(
-                        child: Text('Reuters'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.reuters,
+                        child: Text('Reuters'),
                       ),
-                      PopupMenuItem<FilterList>(
-                        child: Text('BBC Sport'),
+                      const PopupMenuItem<FilterList>(
                         value: FilterList.bbcsport,
+                        child: Text('BBC Sport'),
                       ),
                     ])
           ],
@@ -120,120 +127,119 @@ class _HomeScreenState extends State<HomeScreen> {
         body: ListView(
           children: [
             SizedBox(
-              height: height * .55,
-              width: width,
-              child: FutureBuilder(
-                  future: _newsViewModel.fetchNewsHeadlinesApi(name),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: SpinKitSpinningLines(
-                          color: AppColors.loadingGColor,
-                          size: 50,
-                        ),
-                      );
-                    } else {
-                      return ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: snapshot.data!.articles!.length,
-                        itemBuilder: (context, index) {
-                          DateTime dateTime = DateTime.parse(snapshot.data!.articles![index].publishedAt.toString());
-                          return InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => NewsDetailScreen(
-                                          snapshot.data!.articles![index].urlToImage.toString(),
-                                          snapshot.data!.articles![index].title.toString(),
-                                          snapshot.data!.articles![index].publishedAt.toString(),
-                                          snapshot.data!.articles![index].author.toString(),
-                                          snapshot.data!.articles![index].description.toString(),
-                                          snapshot.data!.articles![index].content.toString(),
-                                          snapshot.data!.articles![index].source!.name.toString())));
-                            },
-                            child: SizedBox(
-                              child: Stack(
-                                alignment: AlignmentDirectional.center,
-                                children: [
-                                  Container(
-                                    height: height * .6,
-                                    width: width * .9,
-                                    padding: EdgeInsets.symmetric(horizontal: height * .02),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(15),
-                                      child: CachedNetworkImage(
-                                        imageUrl: snapshot.data!.articles![index].urlToImage.toString(),
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) => SpinKitCircle(
-                                          color: AppColors.loadingyColor,
-                                          size: 50,
-                                        ),
-                                        errorWidget: (context, url, error) => Icon(
-                                          Icons.error_outline,
-                                          color: AppColors.errorColor,
-                                        ),
-                                      ),
+                height: height * .55,
+                width: width,
+                child: BlocBuilder<NewsBloc, NewsState>(builder: (context, state) {
+                  if (state is NewsFailure) {
+                    return Text(state.error.toString());
+                  }
+                  if (state is! NewsSuccess) {
+                    return const Center(
+                      child: SpinKitSpinningLines(
+                        color: AppColors.loadingGColor,
+                        size: 50,
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: state.newsChannelHeadLinesModel.articles!.length,
+                    itemBuilder: (context, index) {
+                      DateTime dateTime = DateTime.parse(state.newsChannelHeadLinesModel.articles![index].publishedAt.toString());
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => NewsDetailScreen(
+                                      state.newsChannelHeadLinesModel.articles![index].urlToImage.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].title.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].publishedAt.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].author.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].description.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].content.toString(),
+                                      state.newsChannelHeadLinesModel.articles![index].source!.name.toString())));
+                        },
+                        child: SizedBox(
+                          child: Stack(
+                            alignment: AlignmentDirectional.center,
+                            children: [
+                              Container(
+                                height: height * .6,
+                                width: width * .9,
+                                padding: EdgeInsets.symmetric(horizontal: height * .02),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: CachedNetworkImage(
+                                    imageUrl: state.newsChannelHeadLinesModel.articles![index].urlToImage.toString(),
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => const SpinKitCircle(
+                                      color: AppColors.loadingyColor,
+                                      size: 50,
+                                    ),
+                                    errorWidget: (context, url, error) => const Icon(
+                                      Icons.error_outline,
+                                      color: AppColors.errorColor,
                                     ),
                                   ),
-                                  Positioned(
-                                    bottom: 20,
-                                    child: Card(
-                                        elevation: 5,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Container(
-                                          height: height * .22,
-                                          alignment: Alignment.bottomCenter,
-                                          padding: EdgeInsets.all(15),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Container(
-                                                width: width * 0.7,
-                                                child: Text(
-                                                  snapshot.data!.articles![index].title.toString(),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 20,
+                                child: Card(
+                                    elevation: 5,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Container(
+                                      height: height * .22,
+                                      alignment: Alignment.bottomCenter,
+                                      padding: const EdgeInsets.all(15),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: width * 0.7,
+                                            child: Text(
+                                              state.newsChannelHeadLinesModel.articles![index].title.toString(),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context).textTheme.displayMedium,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          SizedBox(
+                                            width: width * .7,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  state.newsChannelHeadLinesModel.articles![index].source!.name.toString(),
                                                   maxLines: 2,
                                                   overflow: TextOverflow.ellipsis,
-                                                  style: Theme.of(context).textTheme.displayMedium,
+                                                  style: Theme.of(context).textTheme.titleMedium,
                                                 ),
-                                              ),
-                                              Spacer(),
-                                              Container(
-                                                width: width * .7,
-                                                child: Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      snapshot.data!.articles![index].source!.name.toString(),
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: Theme.of(context).textTheme.titleMedium,
-                                                    ),
-                                                    Text(
-                                                      format.format(dateTime),
-                                                      maxLines: 2,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: Theme.of(context).textTheme.titleSmall,
-                                                    ),
-                                                  ],
+                                                Text(
+                                                  format.format(dateTime),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: Theme.of(context).textTheme.titleSmall,
                                                 ),
-                                              )
-                                            ],
-                                          ),
-                                        )),
-                                  )
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                                              ],
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                    )),
+                              )
+                            ],
+                          ),
+                        ),
                       );
-                    }
-                  }),
-            ),
+                    },
+                  );
+                })),
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: FutureBuilder<CategoreiesNewsModel>(
@@ -265,11 +271,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fit: BoxFit.cover,
                                     height: height * .18,
                                     width: width * .3,
-                                    placeholder: (context, url) => SpinKitCircle(
+                                    placeholder: (context, url) => const SpinKitCircle(
                                       color: AppColors.loadingyColor,
                                       size: 50,
                                     ),
-                                    errorWidget: (context, url, error) => Icon(
+                                    errorWidget: (context, url, error) => const Icon(
                                       Icons.error_outline,
                                       color: AppColors.errorColor,
                                     ),
@@ -278,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: Container(
                                     height: height * .18,
-                                    padding: EdgeInsets.only(left: 15),
+                                    padding: const EdgeInsets.only(left: 15),
                                     child: Column(
                                       children: [
                                         Text(
@@ -286,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           style: Theme.of(context).textTheme.displayMedium,
                                           maxLines: 3,
                                         ),
-                                        Spacer(),
+                                        const Spacer(),
                                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                                           Expanded(
                                             child: Text(
